@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>tuandv.id.vn</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --card: #171a21;
+    --card-hover: #1e222b;
+    --border: #262b35;
+    --text: #e8eaed;
+    --text-dim: #8b93a1;
+    --accent: #5eb594;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    padding: 32px 16px;
+  }
+  header {
+    text-align: center;
+    margin-bottom: 40px;
+  }
+  h1 {
+    font-size: 28px;
+    font-weight: 700;
+    margin: 0 0 8px;
+    letter-spacing: -0.02em;
+  }
+  header p {
+    color: var(--text-dim);
+    margin: 0;
+    font-size: 14px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    width: 100%;
+    max-width: 820px;
+  }
+  a.card, div.card {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 20px;
+    border-radius: 14px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    text-decoration: none;
+    color: var(--text);
+    transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+  }
+  a.card:hover {
+    background: var(--card-hover);
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+  .icon { font-size: 26px; }
+  .name { font-size: 16px; font-weight: 600; }
+  .desc { font-size: 13px; color: var(--text-dim); }
+  .card.disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+  .badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(94, 181, 148, 0.15);
+    color: var(--accent);
+    width: fit-content;
+  }
+  .card.disabled .badge {
+    background: rgba(139, 147, 161, 0.15);
+    color: var(--text-dim);
+  }
+  footer {
+    margin-top: 48px;
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+</style>
+</head>
+<body>
+  <header>
+    <h1>tuandv.id.vn</h1>
+    <p>Các dự án đang chạy</p>
+  </header>
+
+  <div class="grid">
+    <a class="card" href="https://connectdoctor.tuandv.id.vn" target="_blank" rel="noreferrer">
+      <span class="icon">🩺</span>
+      <span class="name">ConnectDoctor</span>
+      <span class="desc">Telemedicine — kết nối bệnh nhân & bác sĩ</span>
+    </a>
+
+    <a class="card" href="https://kinhdich.tuandv.id.vn" target="_blank" rel="noreferrer">
+      <span class="icon">☯️</span>
+      <span class="name">Kinh Dịch</span>
+      <span class="desc">Học Kinh Dịch, gieo quẻ, giải mộng</span>
+    </a>
+
+    <a class="card" href="https://xsmb.tuandv.id.vn" target="_blank" rel="noreferrer">
+      <span class="icon">🎲</span>
+      <span class="name">XSMB</span>
+      <span class="desc">Thống kê & tư vấn xổ số miền Bắc</span>
+    </a>
+
+    <a class="card" href="https://meeting.tuandv.id.vn" target="_blank" rel="noreferrer">
+      <span class="icon">🎙️</span>
+      <span class="name">AI Meeting Assistant</span>
+      <span class="desc">Trợ lý ghi chú & tóm tắt cuộc họp</span>
+    </a>
+
+    <div class="card disabled" title="Đang phát triển, chưa có bản public">
+      <span class="icon">💼</span>
+      <span class="name">AI Job Search</span>
+      <span class="desc">Trợ lý tìm việc bằng AI</span>
+      <span class="badge">Coming soon</span>
+    </div>
+  </div>
+
+  <footer>© <span id="year"></span> tuandv.id.vn</footer>
+
+  <script>
+    document.getElementById('year').textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>
