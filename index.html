@@ -4,6 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>tuandv.id.vn</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
   :root {
     --bg: #0f1115;
@@ -94,9 +95,190 @@
     font-size: 12px;
     color: var(--text-dim);
   }
+
+  /* --- Auth --- */
+  #authBar {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 50;
+  }
+  .btn-login {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .btn-login:hover {
+    background: var(--card-hover);
+    border-color: var(--accent);
+  }
+  .user-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px 6px 6px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .user-chip:hover { border-color: var(--accent); }
+  .avatar {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: var(--accent);
+    color: #0f1115;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 12px;
+  }
+  .user-menu {
+    position: absolute;
+    top: 44px;
+    right: 0;
+    display: none;
+    flex-direction: column;
+    min-width: 160px;
+    padding: 6px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  }
+  .user-menu.open { display: flex; }
+  .user-menu button {
+    all: unset;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--text);
+    cursor: pointer;
+  }
+  .user-menu button:hover { background: var(--card-hover); }
+
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(4px);
+  }
+  .modal-overlay.open { display: flex; }
+  .auth-modal {
+    width: 100%;
+    max-width: 340px;
+    padding: 24px;
+    border-radius: 16px;
+    background: var(--card);
+    border: 1px solid var(--border);
+  }
+  .auth-modal h2 {
+    margin: 0 0 4px;
+    font-size: 18px;
+  }
+  .auth-modal .sub {
+    margin: 0 0 18px;
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+  .auth-modal input {
+    width: 100%;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 13px;
+    outline: none;
+  }
+  .auth-modal input:focus { border-color: var(--accent); }
+  .auth-modal .error {
+    color: #e0685f;
+    font-size: 12px;
+    margin: 0 0 8px;
+  }
+  .btn-primary {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: none;
+    background: var(--accent);
+    color: #0f1115;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 16px 0;
+    color: var(--text-dim);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .divider::before, .divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+  #googleBtnContainer {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 8px;
+  }
+  .btn-social-fb {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 9px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text-dim);
+    font-size: 13px;
+    cursor: pointer;
+    opacity: 0.6;
+  }
+  .btn-social-fb:hover { border-color: var(--accent); }
+  .close-x {
+    all: unset;
+    position: absolute;
+    top: 14px;
+    right: 16px;
+    cursor: pointer;
+    font-size: 18px;
+    color: var(--text-dim);
+  }
+  .auth-modal { position: relative; }
 </style>
 </head>
 <body>
+  <div id="authBar"></div>
+
   <header>
     <h1>tuandv.id.vn</h1>
     <p>Các dự án đang chạy</p>
@@ -142,8 +324,147 @@
 
   <footer>© <span id="year"></span> tuandv.id.vn</footer>
 
+  <!-- Login modal — client-side only, this landing page has no backend. Signing in
+       here just personalizes the greeting; it never gates the project cards above. -->
+  <div class="modal-overlay" id="authOverlay">
+    <div class="auth-modal">
+      <button class="close-x" id="authCloseBtn">×</button>
+      <h2>Đăng nhập</h2>
+      <p class="sub">Chỉ để cá nhân hoá tên hiển thị trên trang này.</p>
+
+      <form id="basicLoginForm">
+        <input id="basicUsername" placeholder="Tên hiển thị" autocomplete="username" />
+        <input id="basicPassword" type="password" placeholder="Mật khẩu" autocomplete="current-password" />
+        <p class="error" id="basicError" style="display:none"></p>
+        <button type="submit" class="btn-primary">Đăng nhập</button>
+      </form>
+
+      <div class="divider">hoặc</div>
+
+      <div id="googleBtnContainer"></div>
+      <button type="button" class="btn-social-fb" id="fbLoginBtn">📘 Tiếp tục với Facebook (sắp có)</button>
+    </div>
+  </div>
+
   <script>
     document.getElementById('year').textContent = new Date().getFullYear();
+
+    var GOOGLE_CLIENT_ID = '497702857343-k73ttatervnf5moeuho5i3arnfvlrnjo.apps.googleusercontent.com';
+    var STORAGE_KEY = 'tdv_user';
+
+    function decodeJwt(token) {
+      var payload = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+      var json = decodeURIComponent(
+        atob(payload)
+          .split('')
+          .map(function (c) { return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2); })
+          .join('')
+      );
+      return JSON.parse(json);
+    }
+
+    function getUser() {
+      try {
+        var raw = localStorage.getItem(STORAGE_KEY);
+        return raw ? JSON.parse(raw) : null;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function setUser(user) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+      renderAuthBar();
+      closeAuthModal();
+    }
+
+    function logout() {
+      localStorage.removeItem(STORAGE_KEY);
+      renderAuthBar();
+    }
+
+    function renderAuthBar() {
+      var bar = document.getElementById('authBar');
+      var user = getUser();
+
+      if (!user) {
+        bar.innerHTML = '<button class="btn-login" id="openLoginBtn">Đăng nhập</button>';
+        document.getElementById('openLoginBtn').addEventListener('click', openAuthModal);
+        return;
+      }
+
+      var initial = (user.name || '?').trim().charAt(0).toUpperCase();
+      var avatarHtml = user.avatar
+        ? '<img class="avatar" src="' + user.avatar + '" alt="" />'
+        : '<span class="avatar">' + initial + '</span>';
+
+      bar.innerHTML =
+        '<div style="position:relative">' +
+        '<div class="user-chip" id="userChipBtn">' + avatarHtml + '<span>' + user.name + '</span></div>' +
+        '<div class="user-menu" id="userMenu"><button id="logoutBtn">Đăng xuất</button></div>' +
+        '</div>';
+
+      document.getElementById('userChipBtn').addEventListener('click', function () {
+        document.getElementById('userMenu').classList.toggle('open');
+      });
+      document.getElementById('logoutBtn').addEventListener('click', logout);
+    }
+
+    function openAuthModal() {
+      document.getElementById('authOverlay').classList.add('open');
+    }
+    function closeAuthModal() {
+      document.getElementById('authOverlay').classList.remove('open');
+      document.getElementById('basicError').style.display = 'none';
+    }
+
+    document.getElementById('authCloseBtn').addEventListener('click', closeAuthModal);
+    document.getElementById('authOverlay').addEventListener('click', function (e) {
+      if (e.target === e.currentTarget) closeAuthModal();
+    });
+
+    document.getElementById('basicLoginForm').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var name = document.getElementById('basicUsername').value.trim();
+      var password = document.getElementById('basicPassword').value;
+      var errorEl = document.getElementById('basicError');
+      if (!name || !password) {
+        errorEl.textContent = 'Nhập tên hiển thị và mật khẩu';
+        errorEl.style.display = 'block';
+        return;
+      }
+      setUser({ provider: 'basic', name: name, email: null, avatar: null });
+    });
+
+    document.getElementById('fbLoginBtn').addEventListener('click', function () {
+      alert('Đăng nhập Facebook sắp ra mắt.');
+    });
+
+    function handleGoogleCredential(response) {
+      var payload = decodeJwt(response.credential);
+      setUser({
+        provider: 'google',
+        name: payload.name || payload.email,
+        email: payload.email || null,
+        avatar: payload.picture || null,
+      });
+    }
+
+    window.addEventListener('load', function () {
+      renderAuthBar();
+      if (window.google && google.accounts && google.accounts.id) {
+        google.accounts.id.initialize({
+          client_id: GOOGLE_CLIENT_ID,
+          callback: handleGoogleCredential,
+        });
+        google.accounts.id.renderButton(document.getElementById('googleBtnContainer'), {
+          theme: 'filled_black',
+          size: 'medium',
+          shape: 'pill',
+          text: 'continue_with',
+        });
+      }
+    });
   </script>
 </body>
 </html>
