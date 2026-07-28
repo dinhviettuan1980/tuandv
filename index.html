@@ -351,6 +351,20 @@
 
     var GOOGLE_CLIENT_ID = '497702857343-k73ttatervnf5moeuho5i3arnfvlrnjo.apps.googleusercontent.com';
     var STORAGE_KEY = 'tdv_user';
+    var IDENTITY_COOKIE = 'tdv_identity';
+    var COOKIE_DOMAIN = '.tuandv.id.vn';
+
+    // Shared across all *.tuandv.id.vn subdomains — display-name/avatar only,
+    // read by ecosystem-badge.js on the other sites. Not a session/auth token.
+    function setIdentityCookie(user) {
+      var value = encodeURIComponent(JSON.stringify({ name: user.name, avatar: user.avatar || null }));
+      document.cookie =
+        IDENTITY_COOKIE + '=' + value + '; domain=' + COOKIE_DOMAIN + '; path=/; max-age=2592000; secure; samesite=lax';
+    }
+
+    function clearIdentityCookie() {
+      document.cookie = IDENTITY_COOKIE + '=; domain=' + COOKIE_DOMAIN + '; path=/; max-age=0; secure; samesite=lax';
+    }
 
     function decodeJwt(token) {
       var payload = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
@@ -374,12 +388,14 @@
 
     function setUser(user) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+      setIdentityCookie(user);
       renderAuthBar();
       closeAuthModal();
     }
 
     function logout() {
       localStorage.removeItem(STORAGE_KEY);
+      clearIdentityCookie();
       renderAuthBar();
     }
 
@@ -393,18 +409,30 @@
         return;
       }
 
-      var initial = (user.name || '?').trim().charAt(0).toUpperCase();
-      var avatarHtml = user.avatar
-        ? '<img class="avatar" src="' + user.avatar + '" alt="" />'
-        : '<span class="avatar">' + initial + '</span>';
-
       bar.innerHTML =
         '<div style="position:relative">' +
-        '<div class="user-chip" id="userChipBtn">' + avatarHtml + '<span>' + user.name + '</span></div>' +
+        '<div class="user-chip" id="userChipBtn"></div>' +
         '<div class="user-menu" id="userMenu"><button id="logoutBtn">Đăng xuất</button></div>' +
         '</div>';
 
-      document.getElementById('userChipBtn').addEventListener('click', function () {
+      var chip = document.getElementById('userChipBtn');
+      if (user.avatar) {
+        var img = document.createElement('img');
+        img.className = 'avatar';
+        img.src = user.avatar;
+        img.alt = '';
+        chip.appendChild(img);
+      } else {
+        var initial = document.createElement('span');
+        initial.className = 'avatar';
+        initial.textContent = (user.name || '?').trim().charAt(0).toUpperCase();
+        chip.appendChild(initial);
+      }
+      var nameEl = document.createElement('span');
+      nameEl.textContent = user.name;
+      chip.appendChild(nameEl);
+
+      chip.addEventListener('click', function () {
         document.getElementById('userMenu').classList.toggle('open');
       });
       document.getElementById('logoutBtn').addEventListener('click', logout);
