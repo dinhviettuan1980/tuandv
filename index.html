@@ -4,7 +4,6 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>tuandv.id.vn</title>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
   :root {
     --bg: #0f1115;
@@ -244,10 +243,9 @@
     background: var(--border);
   }
   #googleBtnContainer {
-    display: flex;
-    justify-content: center;
     margin-bottom: 8px;
   }
+  .btn-social,
   .btn-social-fb {
     display: flex;
     align-items: center;
@@ -255,14 +253,16 @@
     gap: 8px;
     width: 100%;
     padding: 9px 12px;
+    margin-bottom: 8px;
     border-radius: 10px;
     border: 1px solid var(--border);
     background: var(--bg);
-    color: var(--text-dim);
+    color: var(--text);
     font-size: 13px;
+    font-weight: 600;
     cursor: pointer;
-    opacity: 0.6;
   }
+  .btn-social:hover,
   .btn-social-fb:hover { border-color: var(--accent); }
   .close-x {
     all: unset;
@@ -324,118 +324,123 @@
 
   <footer>© <span id="year"></span> tuandv.id.vn</footer>
 
-  <!-- Login modal — client-side only, this landing page has no backend. Signing in
-       here just personalizes the greeting; it never gates the project cards above. -->
+  <!-- Login modal — real Firebase Auth (email/password + Google + Facebook), shared
+       identity across the whole tuandv.id.vn ecosystem. See
+       .claude/plans/virtual-sparking-beaver.md. -->
   <div class="modal-overlay" id="authOverlay">
     <div class="auth-modal">
       <button class="close-x" id="authCloseBtn">×</button>
       <h2>Đăng nhập</h2>
-      <p class="sub">Chỉ để cá nhân hoá tên hiển thị trên trang này.</p>
+      <p class="sub">Dùng chung cho cả hệ sinh thái tuandv.id.vn.</p>
 
-      <form id="basicLoginForm">
-        <input id="basicUsername" placeholder="Tên hiển thị" autocomplete="username" />
-        <input id="basicPassword" type="password" placeholder="Mật khẩu" autocomplete="current-password" />
-        <p class="error" id="basicError" style="display:none"></p>
-        <button type="submit" class="btn-primary">Đăng nhập</button>
-      </form>
+      <button type="button" class="btn-social" id="googleLoginBtn">Tiếp tục với Google</button>
+      <button type="button" class="btn-social-fb" id="fbLoginBtn">📘 Tiếp tục với Facebook</button>
 
       <div class="divider">hoặc</div>
 
-      <div id="googleBtnContainer"></div>
-      <button type="button" class="btn-social-fb" id="fbLoginBtn">📘 Tiếp tục với Facebook (sắp có)</button>
+      <form id="basicLoginForm">
+        <input id="basicUsername" type="email" placeholder="Email" autocomplete="username" />
+        <input id="basicPassword" type="password" placeholder="Mật khẩu" autocomplete="current-password" />
+        <p class="error" id="basicError" style="display:none"></p>
+        <button type="submit" class="btn-primary">Đăng nhập / Đăng ký</button>
+      </form>
     </div>
   </div>
 
-  <script>
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
+    import {
+      getAuth, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence,
+      GoogleAuthProvider, FacebookAuthProvider, signInWithPopup,
+      signInWithEmailAndPassword, createUserWithEmailAndPassword,
+    } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
+
     document.getElementById('year').textContent = new Date().getFullYear();
 
-    var GOOGLE_CLIENT_ID = '497702857343-k73ttatervnf5moeuho5i3arnfvlrnjo.apps.googleusercontent.com';
-    var STORAGE_KEY = 'tdv_user';
-    var IDENTITY_COOKIE = 'tdv_identity';
-    var COOKIE_DOMAIN = '.tuandv.id.vn';
+    // Same Firebase project ConnectDoctor already uses — shared identity for the whole
+    // tuandv.id.vn ecosystem. Public web config, safe to embed client-side (restricted by
+    // Firebase Authorized domains, not by keeping this value secret).
+    // See .claude/plans/virtual-sparking-beaver.md.
+    const firebaseConfig = {
+      apiKey: 'AIzaSyD3xDlMt7aYdYsutNLYoMcm63LoLt_1Oxo',
+      authDomain: 'connectdoctor-8d202.firebaseapp.com',
+      projectId: 'connectdoctor-8d202',
+      storageBucket: 'connectdoctor-8d202.firebasestorage.app',
+      messagingSenderId: '1063151091025',
+      appId: '1:1063151091025:web:9f7613a32dcfe2d54fa770',
+    };
+    const auth = getAuth(initializeApp(firebaseConfig));
+    setPersistence(auth, browserLocalPersistence).catch(() => {});
 
-    // Shared across all *.tuandv.id.vn subdomains — display-name/avatar only,
-    // read by ecosystem-badge.js on the other sites. Not a session/auth token.
+    const IDENTITY_COOKIE = 'tdv_identity';
+    const COOKIE_DOMAIN = '.tuandv.id.vn';
+
+    // Shared across all *.tuandv.id.vn subdomains — display-name/avatar only, read by
+    // ecosystem-badge.js on the sites not yet migrated to real Firebase SSO (xsmb,
+    // meeting, jobs). Not a session/auth token itself — the real session lives in
+    // Firebase's own persistence (same-origin, shared automatically with /kinhdich).
     function setIdentityCookie(user) {
-      var value = encodeURIComponent(JSON.stringify({ name: user.name, avatar: user.avatar || null }));
+      const value = encodeURIComponent(JSON.stringify({ name: user.name, avatar: user.avatar || null }));
       document.cookie =
-        IDENTITY_COOKIE + '=' + value + '; domain=' + COOKIE_DOMAIN + '; path=/; max-age=2592000; secure; samesite=lax';
+        `${IDENTITY_COOKIE}=${value}; domain=${COOKIE_DOMAIN}; path=/; max-age=2592000; secure; samesite=lax`;
     }
-
     function clearIdentityCookie() {
-      document.cookie = IDENTITY_COOKIE + '=; domain=' + COOKIE_DOMAIN + '; path=/; max-age=0; secure; samesite=lax';
+      document.cookie = `${IDENTITY_COOKIE}=; domain=${COOKIE_DOMAIN}; path=/; max-age=0; secure; samesite=lax`;
     }
 
-    function decodeJwt(token) {
-      var payload = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
-      var json = decodeURIComponent(
-        atob(payload)
-          .split('')
-          .map(function (c) { return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2); })
-          .join('')
-      );
-      return JSON.parse(json);
+    function mapFirebaseError(err) {
+      const code = err && err.code;
+      if (code === 'auth/invalid-email') return 'Email không hợp lệ';
+      if (code === 'auth/weak-password') return 'Mật khẩu tối thiểu 6 ký tự';
+      if (code === 'auth/wrong-password' || code === 'auth/invalid-credential') return 'Sai email hoặc mật khẩu';
+      if (code === 'auth/email-already-in-use') return 'Email đã được dùng với mật khẩu khác';
+      return (err && err.message) || 'Đăng nhập thất bại';
     }
 
-    function getUser() {
-      try {
-        var raw = localStorage.getItem(STORAGE_KEY);
-        return raw ? JSON.parse(raw) : null;
-      } catch (e) {
-        return null;
-      }
+    function showError(err) {
+      if (err && err.code === 'auth/popup-closed-by-user') return;
+      const errorEl = document.getElementById('basicError');
+      errorEl.textContent = mapFirebaseError(err);
+      errorEl.style.display = 'block';
     }
 
-    function setUser(user) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
-      setIdentityCookie(user);
-      renderAuthBar();
-      closeAuthModal();
-    }
+    function renderAuthBar(fbUser) {
+      const bar = document.getElementById('authBar');
 
-    function logout() {
-      localStorage.removeItem(STORAGE_KEY);
-      clearIdentityCookie();
-      renderAuthBar();
-    }
-
-    function renderAuthBar() {
-      var bar = document.getElementById('authBar');
-      var user = getUser();
-
-      if (!user) {
+      if (!fbUser) {
         bar.innerHTML = '<button class="btn-login" id="openLoginBtn">Đăng nhập</button>';
         document.getElementById('openLoginBtn').addEventListener('click', openAuthModal);
         return;
       }
 
+      const name = fbUser.displayName || fbUser.email;
       bar.innerHTML =
         '<div style="position:relative">' +
         '<div class="user-chip" id="userChipBtn"></div>' +
         '<div class="user-menu" id="userMenu"><button id="logoutBtn">Đăng xuất</button></div>' +
         '</div>';
 
-      var chip = document.getElementById('userChipBtn');
-      if (user.avatar) {
-        var img = document.createElement('img');
+      const chip = document.getElementById('userChipBtn');
+      if (fbUser.photoURL) {
+        const img = document.createElement('img');
         img.className = 'avatar';
-        img.src = user.avatar;
+        img.src = fbUser.photoURL;
         img.alt = '';
         chip.appendChild(img);
       } else {
-        var initial = document.createElement('span');
+        const initial = document.createElement('span');
         initial.className = 'avatar';
-        initial.textContent = (user.name || '?').trim().charAt(0).toUpperCase();
+        initial.textContent = (name || '?').trim().charAt(0).toUpperCase();
         chip.appendChild(initial);
       }
-      var nameEl = document.createElement('span');
-      nameEl.textContent = user.name;
+      const nameEl = document.createElement('span');
+      nameEl.textContent = name;
       chip.appendChild(nameEl);
 
-      chip.addEventListener('click', function () {
+      chip.addEventListener('click', () => {
         document.getElementById('userMenu').classList.toggle('open');
       });
-      document.getElementById('logoutBtn').addEventListener('click', logout);
+      document.getElementById('logoutBtn').addEventListener('click', () => signOut(auth));
     }
 
     function openAuthModal() {
@@ -447,51 +452,48 @@
     }
 
     document.getElementById('authCloseBtn').addEventListener('click', closeAuthModal);
-    document.getElementById('authOverlay').addEventListener('click', function (e) {
+    document.getElementById('authOverlay').addEventListener('click', (e) => {
       if (e.target === e.currentTarget) closeAuthModal();
     });
 
-    document.getElementById('basicLoginForm').addEventListener('submit', function (e) {
+    document.getElementById('basicLoginForm').addEventListener('submit', async (e) => {
       e.preventDefault();
-      var name = document.getElementById('basicUsername').value.trim();
-      var password = document.getElementById('basicPassword').value;
-      var errorEl = document.getElementById('basicError');
-      if (!name || !password) {
-        errorEl.textContent = 'Nhập tên hiển thị và mật khẩu';
+      const email = document.getElementById('basicUsername').value.trim();
+      const password = document.getElementById('basicPassword').value;
+      const errorEl = document.getElementById('basicError');
+      errorEl.style.display = 'none';
+      if (!email || !password) {
+        errorEl.textContent = 'Nhập email và mật khẩu';
         errorEl.style.display = 'block';
         return;
       }
-      setUser({ provider: 'basic', name: name, email: null, avatar: null });
-    });
-
-    document.getElementById('fbLoginBtn').addEventListener('click', function () {
-      alert('Đăng nhập Facebook sắp ra mắt.');
-    });
-
-    function handleGoogleCredential(response) {
-      var payload = decodeJwt(response.credential);
-      setUser({
-        provider: 'google',
-        name: payload.name || payload.email,
-        email: payload.email || null,
-        avatar: payload.picture || null,
-      });
-    }
-
-    window.addEventListener('load', function () {
-      renderAuthBar();
-      if (window.google && google.accounts && google.accounts.id) {
-        google.accounts.id.initialize({
-          client_id: GOOGLE_CLIENT_ID,
-          callback: handleGoogleCredential,
-        });
-        google.accounts.id.renderButton(document.getElementById('googleBtnContainer'), {
-          theme: 'filled_black',
-          size: 'medium',
-          shape: 'pill',
-          text: 'continue_with',
-        });
+      try {
+        try {
+          await signInWithEmailAndPassword(auth, email, password);
+        } catch (err) {
+          if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+            await createUserWithEmailAndPassword(auth, email, password);
+          } else {
+            throw err;
+          }
+        }
+        closeAuthModal();
+      } catch (err) {
+        showError(err);
       }
+    });
+
+    document.getElementById('googleLoginBtn').addEventListener('click', () => {
+      signInWithPopup(auth, new GoogleAuthProvider()).then(closeAuthModal).catch(showError);
+    });
+    document.getElementById('fbLoginBtn').addEventListener('click', () => {
+      signInWithPopup(auth, new FacebookAuthProvider()).then(closeAuthModal).catch(showError);
+    });
+
+    onAuthStateChanged(auth, (fbUser) => {
+      if (fbUser) setIdentityCookie({ name: fbUser.displayName || fbUser.email, avatar: fbUser.photoURL });
+      else clearIdentityCookie();
+      renderAuthBar(fbUser);
     });
   </script>
 </body>
